@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mailbox Viewer</title>
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">✉</div>
+      <div class="brand-name">Mailbox Viewer</div>
+    </div>
+
+    <nav class="nav">
+      <button id="navInbox" class="nav-item active" onclick="selectNav('inbox')"><span>⌁</span><strong>收件箱</strong><em id="navInboxCount">0</em></button>
+      <button id="navOtp" class="nav-item" onclick="selectNav('otp')"><span>◇</span><strong>验证码</strong><em id="navOtpCount">0</em></button>
+      <button id="navFlagged" class="nav-item" onclick="selectNav('flagged')"><span>☆</span><strong>已标记</strong><em id="navFlaggedCount">0</em></button>
+      <button id="navAllMail" class="nav-item" onclick="selectNav('allmail')"><span>□</span><strong>全部邮件</strong><em id="navAllMailCount">0</em></button>
+      <button id="navAccounts" class="nav-item" onclick="selectNav('accounts')"><span>👤</span><strong>账号管理</strong><em id="navAccountsCount">0</em></button>
+      <button id="navSettings" class="nav-item" onclick="selectNav('settings')"><span>⚙</span><strong>设置</strong><em></em></button>
+    </nav>
+
+    <section class="accounts-section">
+      <div class="section-title">
+        <span>账号列表</span>
+        <button class="icon-btn" onclick="addAccount()" title="添加账号">+</button>
+      </div>
+      <div id="accountList" class="account-list">
+        <div class="soft-loading"><span class="spinner"></span>加载账号...</div>
+      </div>
+    </section>
+
+    <div class="storage-card">
+      <div class="storage-title">本地存储</div>
+      <div class="storage-meta">Token 已保存在应用数据目录</div>
+      <div class="storage-bar"><span></span></div>
+    </div>
+  </aside>
+
+  <main class="workspace">
+    <header class="topbar">
+      <div class="search-wrap">
+        <span>⌕</span>
+        <input id="searchInput" type="search" placeholder="搜索发件人、主题或验证码..." oninput="renderList()">
+        <kbd>⌘F</kbd>
+      </div>
+      <div class="top-actions">
+        <span id="autoStatus" class="auto-status"></span>
+        <button id="refreshBtn" class="toolbar-btn" onclick="refreshCurrent()" disabled title="刷新当前账号"><span id="refreshIcon" class="refresh-icon">↻</span></button>
+      </div>
+    </header>
+
+    <section class="mail-list-pane">
+      <div class="filter-row">
+        <button id="filterAll" class="pill active" onclick="setFilter('all')">全部</button>
+        <button id="filterUnread" class="pill" onclick="setFilter('unread')">未读</button>
+        <button id="filterOtp" class="pill" onclick="setFilter('otp')">验证码 <span id="otpPillCount">0</span></button>
+        <button id="filterFlag" class="pill" onclick="setFilter('flag')">已标记</button>
+        <button class="pill mark-all-read" onclick="markVisibleAsRead()" title="将当前列表中所有未读邮件标为已读">全部已读</button>
+      </div>
+      <div id="listMeta" class="list-meta">选择一个账号开始加载邮件</div>
+      <div id="messageList" class="message-list">
+        <div class="empty-state">从左侧选择一个邮箱。</div>
+      </div>
+    </section>
+
+    <section class="detail-pane">
+      <div id="detailContent" class="detail-content">
+        <div class="empty-detail">
+          <div class="empty-orb">✉</div>
+          <h2>选择一封邮件</h2>
+          <p>验证码会在这里以大号数字显示，方便快速复制。</p>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<div id="modal" class="modal-overlay">
+  <div class="modal">
+    <h2 id="modalTitle">添加账号</h2>
+    <p id="modalMsg">登录打开的浏览器页面，然后把跳转后的 localhost 地址粘贴到这里。</p>
+    <input id="codeInput" type="text" placeholder="https://localhost/?code=..." />
+    <div id="modalResult"></div>
+    <div class="modal-actions">
+      <button id="modalAdd" class="primary-btn" onclick="startAuth()">登录</button>
+      <button class="toolbar-btn text-btn" onclick="closeModal()">取消</button>
+    </div>
+  </div>
+</div>
+
+<script src="./main.js"></script>
+</body>
+</html>

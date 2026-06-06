@@ -1,0 +1,18 @@
+.DS_Store
+
+# Dependencies and build output
+node_modules/
+dist/
+src-tauri/target/
+
+# Local account/token data
+mailbox_tokens.txt
+success_account.txt
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs and local environment
+*.log
+.env
+.env.*
