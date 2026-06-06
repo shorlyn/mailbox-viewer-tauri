@@ -1,5 +1,5 @@
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use arboard::Clipboard;
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use reqwest::Client;
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
@@ -11,13 +11,54 @@ use std::{
     sync::Mutex,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use tauri::{AppHandle, Manager, State};
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
+    AppHandle, Manager, State, WindowEvent,
+};
 use url::Url;
 
 const CLIENT_ID: &str = "9e5f94bc-e8a4-4e73-b8be-63364c29d753";
 const SCOPE: &str = "offline_access https://graph.microsoft.com/Mail.Read";
 const REDIRECT_URI: &str = "https://localhost";
 const CACHE_LIMIT: u32 = 100;
+
+fn show_main_window(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
+fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
+    let show = MenuItem::with_id(app, "show", "显示", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&show, &quit])?;
+
+    TrayIconBuilder::new()
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .icon(app.default_window_icon().unwrap().clone())
+        .tooltip("Mailbox Viewer")
+        .on_menu_event(|app, event| match event.id().as_ref() {
+            "show" => show_main_window(app),
+            "quit" => app.exit(0),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::DoubleClick {
+                button: MouseButton::Left,
+                ..
+            } = event
+            {
+                show_main_window(&tray.app_handle());
+            }
+        })
+        .build(app)?;
+
+    Ok(())
+}
 
 #[derive(Clone)]
 struct Account {
@@ -1174,6 +1215,21 @@ pub fn run() {
             http: Client::new(),
             token_cache: Mutex::new(HashMap::new()),
             auth_sessions: Mutex::new(HashMap::new()),
+        })
+        .setup(|app| {
+            setup_tray(app.handle())?;
+            Ok(())
+        })
+        .on_window_event(|window, event| match event {
+            WindowEvent::CloseRequested { api, .. } => {
+                api.prevent_close();
+                let _ = window.hide();
+            }
+            #[cfg(target_os = "windows")]
+            WindowEvent::Resized(size) if size.width == 0 && size.height == 0 => {
+                let _ = window.hide();
+            }
+            _ => {}
         })
         .invoke_handler(tauri::generate_handler![
             list_accounts,
