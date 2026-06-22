@@ -317,34 +317,15 @@ select {
   font-size: 18px;
 }
 .flag-detail-btn.active { color: #f5a623; background: #fff8e8; border-color: rgba(245,166,35,.34); }
-.otp-hero, .message-hero { margin: 36px auto 34px; max-width: 560px; text-align: center; }
-.shield { width: 54px; height: 54px; margin: 0 auto 14px; display: grid; place-items: center; border-radius: 18px; color: #fff; background: linear-gradient(135deg, #4b86ff, #8053ff); box-shadow: 0 16px 32px rgba(72,104,255,.24); font-size: 24px; }
-.shield.soft { color: var(--blue); background: #edf4ff; box-shadow: none; }
-.otp-hero h2, .message-hero h2 { max-width: 520px; margin: 0 auto 12px; font-size: 20px; line-height: 1.3; letter-spacing: 0; overflow-wrap: anywhere; }
-.otp-hero p, .message-hero p { color: #40516b; font-size: 13px; line-height: 1.7; }
-.code-row { display: flex; justify-content: center; gap: 7px; margin: 24px 0 12px; }
-.code-cell {
-  min-width: 50px; height: 56px; display: grid; place-items: center;
-  color: var(--blue); border: 1px solid #d4e0f3; border-radius: 8px;
-  background: linear-gradient(180deg, #fff, #f4f8ff);
-  font-size: 34px; font-weight: 820;
-  box-shadow: inset 0 1px 0 #fff;
-}
-.copy-btn { margin-top: 18px; min-width: 280px; }
-.content-card { margin-top: 18px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: rgba(255,255,255,.72); }
-.content-title { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; color: #354a66; border-bottom: 1px solid var(--line); font-weight: 700; font-size: 13px; }
-.mail-body { padding: 18px; font-size: 13px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
-/* 纯文本正文：柔和背景、等比留白，长段落不显得压迫 */
-.mail-body-plain { color: #2a3a52; background: #fafcff; border-top: 1px solid var(--line); }
-/* HTML 邮件 iframe：撑满卡片，高度自适应 */
+.mail-content { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
+.mail-body { font-size: 13px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+.mail-body-plain { color: #2a3a52; }
 .mail-iframe {
   display: block;
   width: 100%;
   min-height: 300px;
   border: none;
-  border-top: 1px solid var(--line);
-  border-radius: 0 0 12px 12px;
-  background: #fff;
+  background: transparent;
 }
 /* 发件人姓名 + 地址 */
 .from-addr { font-size: 11px; color: var(--muted); font-weight: 500; }

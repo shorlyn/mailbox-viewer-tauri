@@ -976,34 +976,22 @@ function renderDetail() {
     message = acc && acc.messages ? acc.messages[selectedMessage] : null;
   }
   if (!message) {
-    box.innerHTML = '<div class="empty-detail"><div class="empty-orb">✉</div><h2>选择一封邮件</h2><p>验证码会在这里以大号数字显示，方便快速复制。</p></div>';
+    box.innerHTML = '<div class="empty-detail"><div class="empty-orb">✉</div><h2>选择一封邮件</h2><p>邮件正文会在这里显示。</p></div>';
     return;
   }
 
   const from = message.from && message.from.emailAddress ? message.from.emailAddress.address : '?';
   const fromName = message.from && message.from.emailAddress ? (message.from.emailAddress.name || '') : '';
   const toParts = (message.toRecipients || []).filter((item) => item && item.emailAddress).map((item) => item.emailAddress.address);
-  const code = otpOf(message);
   const isHtml = message.body && message.body.contentType === 'html';
   const rawBody = (message.body ? message.body.content : '') || message.bodyPreview || '';
-  const codeHtml = code
-    ? '<div class="otp-hero">'
-      + '<div class="shield">⌘</div>'
-      + '<h2>' + esc(message.subject || '验证码') + '</h2>'
-      + '<p>检测到这封邮件里包含验证码，复制后即可使用。</p>'
-      + '<div class="code-row">' + code.split('').map((c) => '<span class="code-cell">' + esc(c) + '</span>').join('') + '</div>'
-      + '<button class="primary-btn copy-btn" data-code="' + esc(code) + '" onclick="copyOtpFromButton(this)">复制验证码</button>'
-      + '</div>'
-    : '<div class="message-hero"><div class="shield soft">✉</div><h2>' + esc(message.subject || '(无主题)') + '</h2><p>这封邮件未检测到验证码。</p></div>';
 
   // 正文区：HTML 邮件用 iframe 沙箱渲染，纯文本美化排版
-  const bodyCardHtml = isHtml
-    ? '<div class="content-card">'
-      + '<div class="content-title"><span>邮件内容</span></div>'
+  const bodyContentHtml = isHtml
+    ? '<div class="mail-content">'
       + '<iframe class="mail-iframe" sandbox="allow-same-origin" srcdoc="" frameborder="0"></iframe>'
       + '</div>'
-    : '<div class="content-card">'
-      + '<div class="content-title"><span>邮件内容</span></div>'
+    : '<div class="mail-content">'
       + '<div class="mail-body mail-body-plain">' + esc(messageBodyText(message) || message.bodyPreview || '') + '</div>'
       + '</div>';
 
@@ -1022,8 +1010,7 @@ function renderDetail() {
     + '</div>'
     + '</div>'
     + '</div>'
-    + codeHtml
-    + bodyCardHtml;
+    + bodyContentHtml;
 
   // HTML 邮件：将原始 HTML 注入 iframe，并注入统一字体样式
   if (isHtml) {
@@ -1031,7 +1018,7 @@ function renderDetail() {
     if (iframe) {
       const styledHtml = '<!DOCTYPE html><html><head><meta charset="utf-8">'
         + '<style>'
-        + 'body{margin:0;padding:16px 18px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;'
+        + 'body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;'
         + 'font-size:13px;line-height:1.75;color:#142033;word-break:break-word;background:#fff;}'
         + 'img{max-width:100%;height:auto;border-radius:4px;}'
         + 'a{color:#2d6bff;text-decoration:none;}'
@@ -1047,7 +1034,7 @@ function renderDetail() {
       iframe.onload = function () {
         try {
           const h = iframe.contentDocument.body.scrollHeight;
-          if (h > 0) iframe.style.height = h + 32 + 'px';
+          if (h > 0) iframe.style.height = h + 8 + 'px';
         } catch (_) {}
       };
     }
