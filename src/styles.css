@@ -334,6 +334,20 @@ select {
 .content-card { margin-top: 18px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: rgba(255,255,255,.72); }
 .content-title { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; color: #354a66; border-bottom: 1px solid var(--line); font-weight: 700; font-size: 13px; }
 .mail-body { padding: 18px; font-size: 13px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+/* 纯文本正文：柔和背景、等比留白，长段落不显得压迫 */
+.mail-body-plain { color: #2a3a52; background: #fafcff; border-top: 1px solid var(--line); }
+/* HTML 邮件 iframe：撑满卡片，高度自适应 */
+.mail-iframe {
+  display: block;
+  width: 100%;
+  min-height: 300px;
+  border: none;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 12px 12px;
+  background: #fff;
+}
+/* 发件人姓名 + 地址 */
+.from-addr { font-size: 11px; color: var(--muted); font-weight: 500; }
 .empty-state, .soft-loading, .empty-detail { color: #8494aa; text-align: center; padding: 80px 20px; font-size: 13px; }
 .empty-detail { height: 100%; display: grid; align-content: center; justify-items: center; gap: 10px; }
 .empty-detail h2 { color: #263550; font-size: 20px; }

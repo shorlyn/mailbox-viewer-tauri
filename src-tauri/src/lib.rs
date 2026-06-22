@@ -172,8 +172,32 @@ fn cache_db_file(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(data_dir.join("mailbox_cache.sqlite"))
 }
 
+fn ensure_db_writable(path: &PathBuf) {
+    // Windows 有时会给 SQLite 文件打上只读属性，导致 WAL 写入失败，这里主动清掉。
+    for suffix in ["", "-shm", "-wal"] {
+        let p = if suffix.is_empty() {
+            path.clone()
+        } else {
+            let mut s = path.as_os_str().to_owned();
+            s.push(suffix);
+            PathBuf::from(s)
+        };
+        if p.exists() {
+            if let Ok(meta) = fs::metadata(&p) {
+                let mut perms = meta.permissions();
+                if perms.readonly() {
+                    perms.set_readonly(false);
+                    let _ = fs::set_permissions(&p, perms);
+                }
+            }
+        }
+    }
+}
+
 fn open_cache_db(app: &AppHandle) -> Result<Connection, String> {
-    let conn = Connection::open(cache_db_file(app)?).map_err(|e| format!("open cache db: {e}"))?;
+    let db_path = cache_db_file(app)?;
+    ensure_db_writable(&db_path);
+    let conn = Connection::open(&db_path).map_err(|e| format!("open cache db: {e}"))?;
     conn.execute_batch(
         "
         PRAGMA journal_mode = WAL;
@@ -798,14 +822,21 @@ async fn exchange_reauth_code(
         .refresh_token
         .as_deref()
         .ok_or_else(|| "refresh_token missing".to_string())?;
-    let actual_email = email_for_token(&state.http, &token.access_token).await;
-
-    if actual_email.to_lowercase() != expected_email.to_lowercase() {
-        return Err(format!(
-            "登录邮箱不一致：期望 {}，实际 {}",
-            expected_email, actual_email
-        ));
-    }
+    let resolved = email_for_token(&state.http, &token.access_token).await;
+    // 如果 token 中无法解析出邮箱（个人 Outlook 账号缺少 User.Read 权限导致
+    // /me 接口返回 403，JWT payload 也可能没有对应字段），则直接信任调用方
+    // 传入的 expected_email，因为 reauth 流程本身已锁定目标账号。
+    let actual_email = if resolved.starts_with("unknown-") {
+        expected_email.clone()
+    } else {
+        if resolved.to_lowercase() != expected_email.to_lowercase() {
+            return Err(format!(
+                "登录邮箱不一致：期望 {}，实际 {}",
+                expected_email, resolved
+            ));
+        }
+        resolved
+    };
 
     save_account(&app, &actual_email, "", refresh_token)?;
 

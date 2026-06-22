@@ -481,6 +481,7 @@ async function loadEmails(i, options = {}) {
     }
   } catch (e) {
     var errStr = String(e);
+    console.error('[fetch_emails error]', acc.email, errStr);
     acc.error = errStr;
     if (!Array.isArray(acc.messages) || !acc.messages.length) {
       acc.messages = [];
@@ -857,12 +858,14 @@ function renderList() {
       const read = isMessageRead(message);
       const newCls = isNewMail(message) ? ' new-mail' : '';
       const cls = 'message-card' + (index === allMailSelected ? ' active' : '') + (read ? '' : ' is-unread') + newCls;
+      // 全部邮件/已标记视图：显示账号名标签；OTP 邮件用验证码替代 preview
+      const previewText = code ? '验证码：' + code : (message.bodyPreview || '');
       html += '<button class="' + cls + '" onclick="selectAllMailMessage(' + index + ')">'
         + '<span class="unread-dot"></span>'
         + '<span class="message-main">'
         + '<span class="sender">' + esc(from) + '</span>'
         + '<span class="subject">' + esc(message.subject || '(无主题)') + '</span>'
-        + '<span class="preview">' + esc(message.bodyPreview || '') + '</span>'
+        + '<span class="preview">' + esc(previewText) + '</span>'
         + (accountName ? '<span class="tag-account">' + esc(accountName) + '</span>' : '')
         + '</span>'
         + '<span class="message-side">'
@@ -905,7 +908,7 @@ function renderList() {
   const loaded = acc.loadedAt
     ? '，' + acc.loadedAt.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
     : (acc.fromCache ? '，本地缓存' : '');
-  const errorBanner = acc.error ? ' ⚠ 刷新失败，正在显示本地缓存' : '';
+  const errorBanner = acc.error ? ' ⚠ 刷新失败：' + acc.error : '';
   meta.textContent = `${acc.displayName || acc.email} · ${items.length}/${acc.count} 封${loaded}${errorBanner}`;
   if (!items.length) {
     list.innerHTML = '<div class="empty-state">没有匹配的邮件。</div>';
@@ -922,13 +925,14 @@ function renderList() {
     const read = isMessageRead(message);
     const newCls = isNewMail(message) ? ' new-mail' : '';
     const cls = 'message-card' + (index === selectedMessage ? ' active' : '') + (read ? '' : ' is-unread') + newCls;
+    // 单账号视图：不显示收件邮箱标签；OTP 邮件用验证码替代 preview
+    const previewText = code ? '验证码：' + code : (message.bodyPreview || '');
     html += '<button class="' + cls + '" onclick="selectMessage(' + index + ')">'
       + '<span class="unread-dot"></span>'
       + '<span class="message-main">'
       + '<span class="sender">' + esc(from) + '</span>'
       + '<span class="subject">' + esc(message.subject || '(无主题)') + '</span>'
-      + '<span class="preview">' + esc(message.bodyPreview || '') + '</span>'
-      + '<span class="tag-email">' + esc(toAddr) + '</span>'
+      + '<span class="preview">' + esc(previewText) + '</span>'
       + '</span>'
       + '<span class="message-side">'
       + '<span class="message-time">' + esc(shortTime(message.receivedDateTime)) + '</span>'
@@ -977,9 +981,11 @@ function renderDetail() {
   }
 
   const from = message.from && message.from.emailAddress ? message.from.emailAddress.address : '?';
+  const fromName = message.from && message.from.emailAddress ? (message.from.emailAddress.name || '') : '';
   const toParts = (message.toRecipients || []).filter((item) => item && item.emailAddress).map((item) => item.emailAddress.address);
   const code = otpOf(message);
-  const body = messageBodyText(message) || message.bodyPreview || '';
+  const isHtml = message.body && message.body.contentType === 'html';
+  const rawBody = (message.body ? message.body.content : '') || message.bodyPreview || '';
   const codeHtml = code
     ? '<div class="otp-hero">'
       + '<div class="shield">⌘</div>'
@@ -990,10 +996,22 @@ function renderDetail() {
       + '</div>'
     : '<div class="message-hero"><div class="shield soft">✉</div><h2>' + esc(message.subject || '(无主题)') + '</h2><p>这封邮件未检测到验证码。</p></div>';
 
+  // 正文区：HTML 邮件用 iframe 沙箱渲染，纯文本美化排版
+  const bodyCardHtml = isHtml
+    ? '<div class="content-card">'
+      + '<div class="content-title"><span>邮件内容</span></div>'
+      + '<iframe class="mail-iframe" sandbox="allow-same-origin" srcdoc="" frameborder="0"></iframe>'
+      + '</div>'
+    : '<div class="content-card">'
+      + '<div class="content-title"><span>邮件内容</span></div>'
+      + '<div class="mail-body mail-body-plain">' + esc(messageBodyText(message) || message.bodyPreview || '') + '</div>'
+      + '</div>';
+
   var read = isMessageRead(message);
+  const fromLabel = fromName ? esc(fromName) + ' <span class="from-addr">&lt;' + esc(from) + '&gt;</span>' : esc(from);
   box.innerHTML = '<div class="mail-head">'
     + '<div class="mail-head-left">'
-    + '<div class="from-line">' + esc(from) + '</div>'
+    + '<div class="from-line">' + fromLabel + '</div>'
     + '<div class="to-line">收件人：' + esc(toParts.join(', ') || '-') + '</div>'
     + '</div>'
     + '<div class="mail-head-right">'
@@ -1005,10 +1023,35 @@ function renderDetail() {
     + '</div>'
     + '</div>'
     + codeHtml
-    + '<div class="content-card">'
-    + '<div class="content-title"><span>邮件内容</span><span>⌃</span></div>'
-    + '<div class="mail-body">' + esc(body) + '</div>'
-    + '</div>';
+    + bodyCardHtml;
+
+  // HTML 邮件：将原始 HTML 注入 iframe，并注入统一字体样式
+  if (isHtml) {
+    const iframe = box.querySelector('.mail-iframe');
+    if (iframe) {
+      const styledHtml = '<!DOCTYPE html><html><head><meta charset="utf-8">'
+        + '<style>'
+        + 'body{margin:0;padding:16px 18px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;'
+        + 'font-size:13px;line-height:1.75;color:#142033;word-break:break-word;background:#fff;}'
+        + 'img{max-width:100%;height:auto;border-radius:4px;}'
+        + 'a{color:#2d6bff;text-decoration:none;}'
+        + 'a:hover{text-decoration:underline;}'
+        + 'table{border-collapse:collapse;max-width:100%;}'
+        + 'td,th{padding:6px 10px;}'
+        + 'hr{border:none;border-top:1px solid #e8edf5;margin:12px 0;}'
+        + 'blockquote{margin:10px 0;padding:8px 14px;border-left:3px solid #d0daf0;color:#5a6b82;}'
+        + 'pre,code{font-family:ui-monospace,monospace;font-size:12px;background:#f4f7fb;border-radius:4px;padding:2px 5px;}'
+        + '</style></head><body>' + rawBody + '</body></html>';
+      iframe.srcdoc = styledHtml;
+      // 内容加载后自动调整 iframe 高度，撑满邮件正文
+      iframe.onload = function () {
+        try {
+          const h = iframe.contentDocument.body.scrollHeight;
+          if (h > 0) iframe.style.height = h + 32 + 'px';
+        } catch (_) {}
+      };
+    }
+  }
 }
 
 async function copyOtp(event, code) {
