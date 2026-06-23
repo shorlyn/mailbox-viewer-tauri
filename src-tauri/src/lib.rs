@@ -47,12 +47,20 @@ fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
             _ => {}
         })
         .on_tray_icon_event(|tray, event| {
-            if let TrayIconEvent::DoubleClick {
-                button: MouseButton::Left,
-                ..
-            } = event
-            {
-                show_main_window(&tray.app_handle());
+            match event {
+                TrayIconEvent::Click {
+                    button: MouseButton::Left,
+                    ..
+                } => {
+                    show_main_window(&tray.app_handle());
+                }
+                TrayIconEvent::DoubleClick {
+                    button: MouseButton::Left,
+                    ..
+                } => {
+                    show_main_window(&tray.app_handle());
+                }
+                _ => {}
             }
         })
         .build(app)?;
